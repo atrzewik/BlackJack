@@ -45,11 +45,3 @@ class UserInputProvider(object):
     def __print_error(error_message):
         print(error_message)
 
-
-# class Player(object):
-#
-#     def how_many_waist(self):
-#         return UserInputProvider().collect_int_in_range_from_user(1, 8, "Please enter number of waist that you want lay from 1 to 8: ")
-#
-#
-# print(Player().how_many_waist())

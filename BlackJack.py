@@ -3,36 +3,15 @@ from enum import Enum, auto
 from UserInputProvider import *
 
 
-class AutoName(Enum):
-    def _generate_next_value_(name, start, count, last_values):
-        return name
-
-
-class Color(AutoName):
+class Color(Enum):
     HEART = auto()
     DIAMOND = auto()
     PEAK = auto()
     CLUB = auto()
 
 
-class Sign(AutoName):
-    TWO = auto()
-    THREE = auto()
-    FOUR = auto()
-    FIVE = auto()
-    SIX = auto()
-    SEVEN = auto()
-    EIGHT = auto()
-    NINE = auto()
-    TEN = auto()
-    JACK = auto()
-    QUEEN = auto()
-    KING = auto()
-    ACE = auto()
-
-
-class Value(Enum):
-    ONE = 1
+class Sign(Enum):
+    ACE = [1, 11]
     TWO = 2
     THREE = 3
     FOUR = 4
@@ -42,7 +21,9 @@ class Value(Enum):
     EIGHT = 8
     NINE = 9
     TEN = 10
-    ELEVEN = 11
+    JACK = 10
+    QUEEN = 10
+    KING = 10
 
 
 class Card(object):
@@ -63,19 +44,19 @@ class Desk(object):
     def list_of_cards():
         cards = []
         for color in Color:
-            cards_in_colour = [Card(Sign.TWO.value, color.value, Value.TWO.value).card,
-                               Card(Sign.THREE.value, color.value, Value.THREE.value).card,
-                               Card(Sign.FOUR.value, color.value, Value.FOUR.value).card,
-                               Card(Sign.FIVE.value, color.value, Value.FIVE.value).card,
-                               Card(Sign.SIX.value, color.value, Value.SIX.value).card,
-                               Card(Sign.SEVEN.value, color.value, Value.SEVEN.value).card,
-                               Card(Sign.EIGHT.value, color.value, Value.EIGHT.value).card,
-                               Card(Sign.NINE.value, color.value, Value.NINE.value).card,
-                               Card(Sign.TEN.value, color.value, Value.TEN.value).card,
-                               Card(Sign.JACK.value, color.value, Value.TEN.value).card,
-                               Card(Sign.QUEEN.value, color.value, Value.TEN.value).card,
-                               Card(Sign.KING.value, color.value, Value.TEN.value).card,
-                               Card(Sign.ACE.value, color.value, [Value.ONE.value, Value.ELEVEN.value]).card]
+            cards_in_colour = [Card(Sign.TWO.name, color.name, Sign.TWO.value).card,
+                               Card(Sign.THREE.name, color.name, Sign.THREE.value).card,
+                               Card(Sign.FOUR.name, color.name, Sign.FOUR.value).card,
+                               Card(Sign.FIVE.name, color.name, Sign.FIVE.value).card,
+                               Card(Sign.SIX.name, color.name, Sign.SIX.value).card,
+                               Card(Sign.SEVEN.name, color.name, Sign.SEVEN.value).card,
+                               Card(Sign.EIGHT.name, color.name, Sign.EIGHT.value).card,
+                               Card(Sign.NINE.name, color.name, Sign.NINE.value).card,
+                               Card(Sign.TEN.name, color.name, Sign.TEN.value).card,
+                               Card(Sign.JACK.name, color.name, Sign.TEN.value).card,
+                               Card(Sign.QUEEN.name, color.name, Sign.TEN.value).card,
+                               Card(Sign.KING.name, color.name, Sign.TEN.value).card,
+                               Card(Sign.ACE.name, color.name, Sign.ACE.value).card]
             cards.extend(cards_in_colour)
         return cards
 
@@ -109,8 +90,8 @@ class Board(object):
         bet_value = bet_value * 2
         return bet_value
 
-    def split(self):
-        self.player_hand = [[self.player_hand[0], self.random_card(1)[0]], [self.player_hand[1], self.random_card(1)[0]]]
+    # def split(self):
+    #     self.player_hand = [[self.player_hand[0], self.random_card(1)[0]], [self.player_hand[1], self.random_card(1)[0]]]
 
 
 class Game(object):
@@ -123,7 +104,7 @@ class Game(object):
         print("You have: ", self.board.player_hand[0], " and ", self.board.player_hand[1])
         self.board.croupier_hand = self.board.random_card(2)
         print("Croupier have: ", self.board.croupier_hand[0])
-        what_next = UserInputProvider().collect_proper_str_from_user(["h", "st", "dd", "sp"], "Please enter h for hit, st for stand, dd for double down or sp for split: ")
+        what_next = UserInputProvider().collect_proper_str_from_user(["h", "st", "dd"], "Please enter h for hit, st for stand or dd for double down: ")
         self.select_activity(what_next)
 
     def select_activity(self, activity):
@@ -137,8 +118,13 @@ class Game(object):
             self.bet_value = self.board.double_down(self.bet_value)
             print("You have: ", self.board.player_hand[0], ", ", self.board.player_hand[1], " and ",
                   self.board.player_hand[2], ". Your bet is equal to: ", self.bet_value)
-        else:
-            self.board.split()
+        # else:
+        #     self.board.split()
+
+    def count_result(self, hand):
+        result = 0
+        for card in hand:
+            result += 1
 
 
 print(Desk().waist)
