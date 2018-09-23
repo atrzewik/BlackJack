@@ -9,12 +9,9 @@ class Color(Enum):
     PEAK = 3
     CLUB = 4
 
-    @staticmethod
-    def list_of_colors():
-        colors = []
-        for color in Color:
-            colors.append(color.name)
-        return colors
+    @classmethod
+    def list_of_colors(cls):
+        return list(color.name for color in cls)
 
 
 class Sign(Enum):
@@ -33,12 +30,9 @@ class Sign(Enum):
     QUEEN = 10
     KING = 10
 
-    @staticmethod
-    def dict_of_signs_and_values():
-        signs = {}
-        for sign in Sign:
-            signs[sign.name] = sign.value
-        return signs
+    @classmethod
+    def dict_of_signs_and_values(cls):
+        return dict([(sign.name, sign.value) for sign in cls])
 
 
 class Card(object):
