@@ -35,36 +35,36 @@ class Sign(Enum):
     KING = 10
 
 
-class ListOfSigns(object):
+class ListOfSignsAndValues(object):
 
     def __init__(self):
-        self.signs = []
+        self.signs = {}
         for sign in Sign:
-            self.signs.append([sign.name, sign.value])
+            self.signs[sign.name] = sign.value
 
 
 class Card(object):
 
-    def __init__(self, sign, color, value):
-        self.card = [str(sign) + " " + str(color), value]
+    def __init__(self, sign, color):
+        self.card = [sign, color]
 
 
 class ListOfCards(object):
 
     def __init__(self):
-        self.cards= []
+        self.cards = []
         for color in ListOfColors().colors:
-            for sign in ListOfSigns().signs:
-                self.cards.append(Card(sign[0], color, sign[1]).card)
+            for sign in ListOfSignsAndValues().signs:
+                self.cards.append(Card(sign, color).card)
 
 
 class Deck(object):
 
     def __init__(self):
         self.cards = ListOfCards().cards
-        self.waist = {}
+        self.waist = []
         for i in range(len(self.cards)):
-            self.waist[self.cards[i][0]] = self.cards[i][1]
+            self.waist.append(self.cards[i][0] + " " + self.cards[i][1])
 
 
 class Croupier(object):
@@ -77,13 +77,13 @@ class Croupier(object):
     def give_random_card(self, number):
         cards = []
         for i in range(number):
-            card = choice(list(self.deck))
+            card = choice(self.deck)
             self.delete_card_from_deck(card)
             cards.append(card)
         return cards
 
     def delete_card_from_deck(self, card):
-        del self.deck[card]
+        self.deck.remove(card)
 
     def print_cards(self, hand):
         cards = ""
@@ -97,14 +97,13 @@ class Croupier(object):
     def count_score(self, hand):
         result = 0
         for card in hand:
-            result += int(Deck().waist[card])
+            result += int(ListOfSignsAndValues().signs[card.split()[0]])
         return result
 
     def check_if_ace_in_hand(self, hand):
         list_of_signs = []
         for i in range(len(hand)):
-            sign_and_value = hand[i].split()
-            list_of_signs.append(sign_and_value[0])
+            list_of_signs.append(hand[i].split()[0])
         if "ACE" in list_of_signs:
             return True
 
@@ -178,10 +177,13 @@ class Game(object):
         self.check_the_winner()
 
     def check_the_buster(self):
-        if self.player.score > 21:
-            print("Player bust")
+        if self.player.score > 21 and self.croupier.score > 21:
+            print("Draw")
             return True
-        if self.croupier.score > 21:
+        elif self.player.score > 21:
+            print("Player bust, Croupier win")
+            return True
+        elif self.croupier.score > 21:
             print("Croupier bust, Player win", self.bet_value)
             return True
         else:
