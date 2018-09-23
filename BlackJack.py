@@ -48,23 +48,17 @@ class Card(object):
     def __init__(self, sign, color):
         self.card = [sign, color]
 
-
-class ListOfCards(object):
-
-    def __init__(self):
-        self.cards = []
-        for color in ListOfColors().colors:
-            for sign in ListOfSignsAndValues().signs:
-                self.cards.append(Card(sign, color).card)
+    def __repr__(self):
+        return self.card[0] + " " + self.card[1]
 
 
 class Deck(object):
 
     def __init__(self):
-        self.cards = ListOfCards().cards
         self.waist = []
-        for i in range(len(self.cards)):
-            self.waist.append(self.cards[i][0] + " " + self.cards[i][1])
+        for color in ListOfColors().colors:
+            for sign in ListOfSignsAndValues().signs:
+                self.waist.append(Card(sign, color))
 
 
 class Croupier(object):
@@ -79,7 +73,7 @@ class Croupier(object):
         for i in range(number):
             card = choice(self.deck)
             self.delete_card_from_deck(card)
-            cards.append(card)
+            cards.append(str(card))
         return cards
 
     def delete_card_from_deck(self, card):
@@ -153,12 +147,11 @@ class Player(object):
             self.select_activity(bet_value)
 
     def get_player_score(self):
+        self.score = self.croupier.count_score(self.hand)
         if self.croupier.check_if_ace_in_hand(self.hand):
             decision = UserInputProvider().collect_proper_str_from_user(["1", "11"], "What value of ACE do you prefer? Enter 1 or 11: ")
             if decision == 11:
-                self.score = self.croupier.count_score(self.hand) + 10
-        else:
-            self.score = self.croupier.count_score(self.hand)
+                self.score += 10
 
 
 class Game(object):
