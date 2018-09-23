@@ -9,13 +9,12 @@ class Color(Enum):
     PEAK = 3
     CLUB = 4
 
-
-class ListOfColors(object):
-
-    def __init__(self):
-        self.colors = []
+    @staticmethod
+    def list_of_colors():
+        colors = []
         for color in Color:
-            self.colors.append(color.name)
+            colors.append(color.name)
+        return colors
 
 
 class Sign(Enum):
@@ -34,13 +33,12 @@ class Sign(Enum):
     QUEEN = 10
     KING = 10
 
-
-class ListOfSignsAndValues(object):
-
-    def __init__(self):
-        self.signs = {}
+    @staticmethod
+    def dict_of_signs_and_values():
+        signs = {}
         for sign in Sign:
-            self.signs[sign.name] = sign.value
+            signs[sign.name] = sign.value
+        return signs
 
 
 class Card(object):
@@ -56,8 +54,8 @@ class Deck(object):
 
     def __init__(self):
         self.waist = []
-        for color in ListOfColors().colors:
-            for sign in ListOfSignsAndValues().signs:
+        for color in Color.list_of_colors():
+            for sign in Sign.dict_of_signs_and_values():
                 self.waist.append(Card(sign, color))
 
 
@@ -91,7 +89,7 @@ class Croupier(object):
     def count_score(self, hand):
         result = 0
         for card in hand:
-            result += int(ListOfSignsAndValues().signs[card.split()[0]])
+            result += int(Sign.dict_of_signs_and_values()[card.split()[0]])
         return result
 
     def check_if_ace_in_hand(self, hand):
