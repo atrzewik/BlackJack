@@ -10,8 +10,8 @@ class Color(Enum):
     CLUB = 4
 
     @classmethod
-    def list_of_colors(cls):
-        return list(color.name for color in cls)
+    def values(cls):
+        return list(cls)
 
 
 class Sign(Enum):
@@ -31,8 +31,8 @@ class Sign(Enum):
     KING = 10
 
     @classmethod
-    def dict_of_signs_and_values(cls):
-        return dict([(sign.name, sign.value) for sign in cls])
+    def values(cls):
+        return list(cls)
 
 
 class Card(object):
@@ -48,9 +48,9 @@ class Deck(object):
 
     def __init__(self):
         self.waist = []
-        for color in Color.list_of_colors():
-            for sign in Sign.dict_of_signs_and_values():
-                self.waist.append(Card(sign, color))
+        for color in Color.values():
+            for sign in Sign.values():
+                self.waist.append(Card(sign.name, color.name))
 
 
 class Croupier(object):
@@ -83,7 +83,9 @@ class Croupier(object):
     def count_score(self, hand):
         result = 0
         for card in hand:
-            result += int(Sign.dict_of_signs_and_values()[card.split()[0]])
+            for sign in Sign.values():
+                if sign.name == card.split()[0]:
+                    result += sign.value
         return result
 
     def check_if_ace_in_hand(self, hand):
@@ -141,7 +143,7 @@ class Player(object):
     def get_player_score(self):
         self.score = self.croupier.count_score(self.hand)
         if self.croupier.check_if_ace_in_hand(self.hand):
-            decision = UserInputProvider().collect_proper_str_from_user(["1", "11"], "What value of ACE do you prefer? Enter 1 or 11: ")
+            decision = int(UserInputProvider().collect_proper_str_from_user(["1", "11"], "What value of ACE do you prefer? Enter 1 or 11: "))
             if decision == 11:
                 self.score += 10
 
