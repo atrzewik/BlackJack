@@ -6,7 +6,7 @@ from UserInputProvider import *
 class Color(Enum):
     HEART = 1
     DIAMOND = 2
-    PEAK = 3
+    SPADE = 3
     CLUB = 4
 
     @classmethod
@@ -150,29 +150,34 @@ class Player(object):
 
 class Game(object):
 
-    def __init__(self):
+    def __init__(self, init_or_dont=1):
+        self.init_or_dont = init_or_dont
         self.player = Player()
         self.croupier = Croupier()
-        self.bet_value = self.player.bet()
-        self.croupier.get_cards(self.player.hand, 2)
-        print("You have: ", self.croupier.print_cards(self.player.hand))
-        self.croupier.get_cards(self.croupier.hand, 2)
-        print("Croupier have: ", self.croupier.hand[0])
-        self.player.select_activity(self.bet_value)
-        self.croupier.get_croupier_score()
-        print("Croupier cards: ", self.croupier.print_cards(self.croupier.hand))
-        self.check_the_winner()
+        if self.init_or_dont:
+            self.bet_value = self.player.bet()
+            self.croupier.get_cards(self.player.hand, 2)
+            print("You have: ", self.croupier.print_cards(self.player.hand))
+            self.croupier.get_cards(self.croupier.hand, 2)
+            print("Croupier have: ", self.croupier.hand[0])
+            self.player.select_activity(self.bet_value)
+            self.croupier.get_croupier_score()
+            print("Croupier cards: ", self.croupier.print_cards(self.croupier.hand))
+            self.check_the_winner()
 
     def check_the_buster(self):
         if self.player.score > 21 and self.croupier.score > 21:
             print("Draw")
-            return True
+            condition = 0
+            return condition, True
         elif self.player.score > 21:
             print("Player bust, Croupier win")
-            return True
+            condition = -1
+            return condition, True
         elif self.croupier.score > 21:
             print("Croupier bust, Player win", self.bet_value)
-            return True
+            condition = 1
+            return condition, True
         else:
             return False
 
@@ -180,10 +185,16 @@ class Game(object):
         if not self.check_the_buster():
             if self.player.score == self.croupier.score:
                 print("Draw")
+                condition = 0
+                return condition
             elif 21 - self.player.score > 21 - self.croupier.score:
                 print("Croupier win")
+                condition = -1
+                return condition
             else:
                 print("Player win ", self.bet_value)
+                condition = 1
+                return condition
 
 
-print(Game())
+# print(Game())
