@@ -38,19 +38,57 @@ class Sign(Enum):
 class Card(object):
 
     def __init__(self, sign, color):
-        self.card = [sign, color]
+        self.sign = sign
+        self.color = color
 
     def __repr__(self):
-        return self.card[0] + " " + self.card[1]
+        return self.sign.name + " " + self.color.name
 
 
 class Deck(object):
 
     def __init__(self):
-        self.waist = []
+        self.cards = []
         for color in Color.values():
             for sign in Sign.values():
-                self.waist.append(Card(sign.name, color.name))
+                self.cards.append(Card(sign, color))
+
+    def shuffled_deck(self):
+        cards = []
+        for i in range(len(self.cards)):
+            card = choice(self.cards)
+            self.delete_card_from_deck(self.cards, card)
+            cards.append(str(card))
+        return cards
+
+    def delete_card_from_deck(self, deck, card):
+        deck.remove(card)
+
+
+class Contestant(object):
+
+    def __init__(self):
+        self.shuffled_deck = Deck().shuffled_deck()
+
+    def get_cards(self, hand, number):
+        for i in range(number):
+            hand.append(self.shuffled_deck[0])
+            Deck().delete_card_from_deck(self.shuffled_deck, self.shuffled_deck[0])
+
+    def count_score(self, hand):
+        result = 0
+        for card in hand:
+            for sign in Sign.values():
+                if sign.name == card.split()[0]:
+                    result += sign.value
+        return result
+
+    def check_if_ace_in_hand(self, hand):
+        list_of_signs = []
+        for i in range(len(hand)):
+            list_of_signs.append(hand[i].split()[0])
+        if "ACE" in list_of_signs:
+            return True
 
 
 class Croupier(object):
@@ -58,7 +96,7 @@ class Croupier(object):
     def __init__(self):
         self.score = 0
         self.hand = []
-        self.deck = Deck().waist
+        self.deck = Deck().cards
 
     def give_random_card(self, number):
         cards = []
@@ -78,7 +116,8 @@ class Croupier(object):
         return cards
 
     def get_cards(self, hand, number):
-        hand.extend(self.give_random_card(number))
+        for i in range(number):
+            hand.extend(self.give_random_card(number))
 
     def count_score(self, hand):
         result = 0
