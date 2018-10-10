@@ -67,9 +67,10 @@ class Deck(object):
 
 class Contestant(object):
 
-    def __init__(self, name, hand):
+    def __init__(self, name, bet_value, hand):
         self.name = name
         self.hand = hand
+        self.bet_value = bet_value
         self.score = 0
 
     def count_score(self):
@@ -114,33 +115,29 @@ class Croupier(Contestant):
 
 class Player(Contestant):
 
-    @staticmethod
-    def bet(name):
-        return int(UserInputProvider().collect_int_in_range_from_user(0, 1000, "%s please enter your amount of bet bigger than 0, less then 1000: " % name))
-
-    def select_activity(self, deck, bet_value):
+    def select_activity(self, deck):
         activity = UserInputProvider().collect_proper_str_from_user(["h", "st", "dd"], "%s please enter h for hit, st for stand or dd for double down: " % self.name)
         if activity == "h":
-            self.hit(deck, bet_value)
+            self.hit(deck)
         elif activity == "st":
             self.stand()
         elif activity == "dd":
-            self.double_down(deck, bet_value)
+            self.double_down(deck)
 
-    def hit(self, deck, bet_value):
+    def hit(self, deck):
         Deck().get_cards(self.hand, deck, 1)
         print("You have: ", self.print_cards())
-        self.select_activity(deck, bet_value)
+        self.select_activity(deck)
 
     def stand(self):
         self.score = self.get_player_score()
         print("Your score is: ", self.score)
 
-    def double_down(self, deck, bet_value):
+    def double_down(self, deck):
         Deck().get_cards(self.hand, deck, 1)
-        bet_value = bet_value * 2
-        print("You have: ", self.print_cards(), "Your bet is equal to: ", bet_value)
-        self.select_activity(deck, bet_value)
+        self.bet_value = self.bet_value * 2
+        print("You have: ", self.print_cards(), "Your bet is equal to: %s $" % self.bet_value)
+        self.select_activity(deck)
 
     def get_player_score(self):
         score = self.count_score()
@@ -154,12 +151,11 @@ class Player(Contestant):
 class Game(object):
 
     def __init__(self):
-        self.bet = 0
-        self.croupier = Croupier("Croupier", [])
+        self.croupier = Croupier("Croupier", 0, [])
         self.number_of_players = UserInputProvider().collect_int_in_range_from_user(1, 6, "Please enter number of players: 1 - 6: ")
         self.players = []
         for i in range(self.number_of_players):
-            player = Player(self.give_name(i), [])
+            player = Player(self.give_name(i), 0, [])
             self.players.append(player)
         deck = Deck().shuffle_deck()
         Deck().get_cards(self.croupier.hand, deck, 2)
@@ -167,16 +163,22 @@ class Game(object):
         for player in self.players:
             Deck().get_cards(player.hand, deck, 2)
             print("%s have: " % player.name, player.hand)
-            player.select_activity(deck, self.bet)
+            player.bet_value = self.bet(player.name)
+            player.select_activity(deck)
         self.croupier.score = self.croupier.get_croupier_score(deck)
         print("Croupier score is: ", self.croupier.score)
         self.players.append(self.croupier)
         self.check_the_buster()
         self.check_the_winner()
 
-    def give_name(self, player_s_number):
+    @staticmethod
+    def give_name(player_s_number):
         name = UserInputProvider().collect_str_from_user("Please enter name for %s player: " % (player_s_number + 1))
         return name
+
+    @staticmethod
+    def bet(name):
+        return int(UserInputProvider().collect_int_in_range_from_user(5, 500, "%s please enter your amount of bet bigger than 5$, less then 500$: " % name))
 
     def check_the_buster(self):
         busters = []
@@ -184,6 +186,7 @@ class Game(object):
             if player.score > 21:
                 print("%s bust" % player.name)
                 busters.append(player)
+                self.croupier.bet_value += player.bet_value
         for buster in busters:
             self.players.remove(buster)
 
@@ -195,15 +198,17 @@ class Game(object):
         winners = []
         for player in self.players:
             if player.score == winning_score:
-                winners.append(player.name)
+                winners.append(player)
             else:
+                self.croupier.bet_value += player.bet_value
                 print("%s lose" % player.name)
         if len(winners) > 1:
             for winner in winners:
-                print(winner, end=" ")
-            print("have a draw")
+                print(winner.name, "won %s $" % winner.bet_value, end=", ")
+            print("and they have a draw")
         else:
-            print("%s is a winner" % winners[0])
+            winner = winners[0]
+            print("%s is the winner, and won %s $" % (winner.name, winner.bet_value))
 
 
 print(Game())
