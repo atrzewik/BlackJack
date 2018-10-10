@@ -169,7 +169,8 @@ class Game(object):
         print("Croupier score is: ", self.croupier.score)
         self.players.append(self.croupier)
         self.check_the_buster()
-        self.check_the_winner()
+        if len(self.players) > 0:
+            self.check_the_winner()
 
     @staticmethod
     def give_name(player_s_number):
