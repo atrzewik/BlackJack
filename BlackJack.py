@@ -1,5 +1,7 @@
-from random import sample
+from random import shuffle
+
 from aenum import Enum, NoAlias
+
 from UserInputProvider import *
 
 
@@ -52,164 +54,171 @@ class Deck(object):
         for color in Color.values():
             for sign in Sign.values():
                 self.cards.append(Card(sign, color))
+        self.shuffle_deck()
 
     def shuffle_deck(self):
-        return sample(self.cards, len(self.cards))
+        return shuffle(self.cards)
 
-    def delete_card_from_deck(self, deck, card):
-        deck.remove(card)
+    def get_card(self):
+        card = self.cards[0]
+        self.__delete_card_from_deck(card)
+        return card
 
-    def get_cards(self, hand, deck, number):
+    def get_cards(self, number):
+        list_of_cards = []
         for i in range(number):
-            hand.append(deck[0])
-            Deck().delete_card_from_deck(deck, deck[0])
+            list_of_cards.append(self.get_card())
+        return list_of_cards
+
+    def __delete_card_from_deck(self, card):
+        self.cards.remove(card)
 
 
 class Contestant(object):
 
-    def __init__(self, name, bet_value, hand):
-        self.name = name
-        self.hand = hand
-        self.bet_value = bet_value
-        self.score = 0
+    def __init__(self):
+        self.hand = []
+
+    def add_card_to_hand(self, card):
+        self.hand.append(card)
 
     def count_score(self):
-        result = 0
+        score = 0
         for card in self.hand:
-            result += card.sign.value
-        return result
+            score += card.sign.value
+        if self.__ace_in_hand() and score <= 11:
+            score += 10
+        return score
 
-    def check_if_ace_in_hand(self):
+    def __ace_in_hand(self):
         list_of_signs = [card.sign for card in self.hand]
-        if Sign.ACE in list_of_signs:
-            return True
-
-    def print_cards(self):
-        return self.hand
+        return Sign.ACE in list_of_signs
 
 
 class Croupier(Contestant):
 
-    def action_if_ace_in_croupier_hand(self, deck):
-        score = self.count_score()
-        if 16 < score + 10 <= 21:
-            score += 10
-            return score
-        else:
-            Deck().get_cards(self.hand, deck, 1)
-            print("Croupier have: ", self.print_cards())
-            return self.get_croupier_score(deck)
+    def __init__(self):
+        super().__init__()
+        self.name = "Croupier"
 
-    def get_croupier_score(self, deck):
-        score = self.count_score()
-        if score <= 16:
-            if self.check_if_ace_in_hand():
-                return self.action_if_ace_in_croupier_hand(deck)
-            else:
-                Deck().get_cards(self.hand, deck, 1)
-                print("Croupier have: ", self.print_cards())
-                return self.get_croupier_score(deck)
-        else:
-            return score
+    def should_draw_cards(self):
+        return self.count_score() <= 16
+
+    def get_single_card(self):
+        return self.hand[0]
+
+
+class LastMove(Enum):
+    _settings_ = NoAlias
+    NONE = 'n'
+    STAND = 'st'
+    HIT = 'h'
+    DOUBLE = 'd'
+    SPLIT = 'sp'
+
+    @classmethod
+    def select_move(cls, player_move):
+        for last_move in cls.values():
+            if last_move.value == player_move:
+                return last_move
+
+    @classmethod
+    def values(cls):
+        return list(cls)
 
 
 class Player(Contestant):
 
-    def select_activity(self, deck):
-        activity = UserInputProvider().collect_proper_str_from_user(["h", "st", "dd"], "%s please enter h for hit, st for stand or dd for double down: " % self.name)
-        if activity == "h":
-            self.hit(deck)
-        elif activity == "st":
-            self.stand()
-        elif activity == "dd":
-            self.double_down(deck)
-
-    def hit(self, deck):
-        Deck().get_cards(self.hand, deck, 1)
-        print("You have: ", self.print_cards())
-        self.select_activity(deck)
-
-    def stand(self):
-        self.score = self.get_player_score()
-        print("Your score is: ", self.score)
-
-    def double_down(self, deck):
-        Deck().get_cards(self.hand, deck, 1)
-        self.bet_value = self.bet_value * 2
-        print("You have: ", self.print_cards(), "Your bet is equal to: %s $" % self.bet_value)
-        self.select_activity(deck)
-
-    def get_player_score(self):
-        score = self.count_score()
-        if self.check_if_ace_in_hand():
-            decision = int(UserInputProvider().collect_proper_str_from_user(["1", "11"], "What value of ACE do you prefer? Enter 1 or 11: "))
-            if decision == 11:
-                score += 10
-        return score
+    def __init__(self, name, cash):
+        super().__init__()
+        self.name = name
+        self.cash = cash
+        self.bet_value = 0
+        self.last_move = LastMove.NONE
 
 
 class Game(object):
 
-    def __init__(self):
-        self.croupier = Croupier("Croupier", 0, [])
-        self.number_of_players = UserInputProvider().collect_int_in_range_from_user(1, 6, "Please enter number of players: 1 - 6: ")
+    def __init__(self, number_of_players):
+        self.croupier = Croupier()
         self.players = []
-        for i in range(self.number_of_players):
-            player = Player(self.give_name(i), 0, [])
-            self.players.append(player)
-        deck = Deck().shuffle_deck()
-        Deck().get_cards(self.croupier.hand, deck, 2)
-        print("Croupier have: ", self.croupier.hand[0])
-        for player in self.players:
-            Deck().get_cards(player.hand, deck, 2)
-            print("%s have: " % player.name, player.hand)
-            player.bet_value = self.bet(player.name)
-            player.select_activity(deck)
-        self.croupier.score = self.croupier.get_croupier_score(deck)
-        print("Croupier score is: ", self.croupier.score)
+        self.deck = Deck()
+        self.create_players(number_of_players)
+        self.deal_cards()
+        self.print_croupier_card()
+        # self.players_betting()
+        self.players_auction()
+        self.get_croupier_card()
+        self.check_the_winner()
+
+    def create_players(self, number_of_players):
+        for i in range(number_of_players):
+            player_name = UserInputProvider().collect_str_from_user("Please enter player name: ")
+            player_cash = UserInputProvider().collect_int_from_user(
+                "Please enter amount of cash for %s: " % player_name)
+            self.players.append(Player(player_name, player_cash))
+
+    def deal_cards(self):
+        for card_number in range(2):
+            for player in self.players:
+                card = self.deck.get_card()
+                player.add_card_to_hand(card)
+            self.croupier.add_card_to_hand(self.deck.get_card())
+
+    def players_auction(self):
+        while not all(player_last_move == LastMove.STAND for player_last_move in [player.last_move for player in self.players]):
+            for player in self.players:
+                if player.last_move != LastMove.STAND:
+                    print("%s have: %s, %s points" % (player.name, player.hand, player.count_score()))
+                    choice = UserInputProvider().collect_proper_str_from_user(["h", "st", "H", "ST"],
+                                                                              "%s, please enter h for hit or st for stand: " % player.name)
+                    player.last_move = LastMove.select_move(choice)
+                    self.game_action(choice, player)
+
+    def game_action(self, choice, player):
+        if choice == "h":
+            player.add_card_to_hand(self.deck.get_card())
+
+    def get_croupier_card(self):
+        while self.croupier.should_draw_cards():
+            print("Croupier have: %s, %s, points" % (self.croupier.hand, self.croupier.count_score()))
+            self.croupier.add_card_to_hand(self.deck.get_card())
+        else:
+            print("Croupier have: %s, %s, points" % (self.croupier.hand, self.croupier.count_score()))
+
+    def print_croupier_card(self):
+        print("Croupier have: ", self.croupier.get_single_card())
+
+    # def players_betting(self):
+    #     for player in self.players:
+    #         print("%s have: %s" % (player.name, player.hand))
+    #         player.bet_value = int(UserInputProvider().collect_int_in_range_from_user(1, player.cash,
+    #                                                                                   "%s please enter your bet bigger than 1$: " % player.name))
+
+    def get_busters(self):
         self.players.append(self.croupier)
-        self.check_the_buster()
-        if len(self.players) > 0:
-            self.check_the_winner()
+        busters = [player for player in self.players if player.count_score() > 21]
+        [self.players.remove(buster) for buster in busters]
+        return busters
 
-    @staticmethod
-    def give_name(player_s_number):
-        name = UserInputProvider().collect_str_from_user("Please enter name for %s player: " % (player_s_number + 1))
-        return name
-
-    @staticmethod
-    def bet(name):
-        return int(UserInputProvider().collect_int_in_range_from_user(5, 500, "%s please enter your amount of bet bigger than 5$, less then 500$: " % name))
-
-    def check_the_buster(self):
-        busters = []
-        for player in self.players:
-            if player.score > 21:
-                print("%s bust" % player.name)
-                busters.append(player)
-                self.croupier.bet_value += player.bet_value
-        for buster in busters:
-            self.players.remove(buster)
+    def sort_by_scores(self, score):
+        return score.count_score()
 
     def check_the_winner(self):
-        players_scores = []
-        for player in self.players:
-            players_scores.append(player.score)
-        winning_score = max(players_scores)
-        winners = []
-        for player in self.players:
-            if player.score == winning_score:
-                winners.append(player)
-            else:
-                self.croupier.bet_value += player.bet_value
-                print("%s lose" % player.name)
-        if len(winners) > 1:
+        sorted_busters = sorted(self.get_busters(), key=self.sort_by_scores)
+        sorted_players = sorted(self.players, key=self.sort_by_scores, reverse=True)
+        winners = [player for player in sorted_players if player.count_score() == sorted_players[0].count_score()]
+        [sorted_players.remove(player) for player in sorted_players if player in winners]
+        if len(winners) > 0:
             for winner in winners:
-                print(winner.name, "won %s $" % winner.bet_value, end=", ")
-            print("and they have a draw")
-        else:
-            winner = winners[0]
-            print("%s is the winner, and won %s $" % (winner.name, winner.bet_value))
+                print("The winner is: %s with %s points" % (winner.name, winner.count_score()))
+        if len(sorted_players) > 0:
+            for player in sorted_players:
+                print("%s have %s points" % (player.name, player.count_score()))
+        if len(sorted_busters) > 0:
+            for buster in sorted_busters:
+                print("The buster is: %s with %s points" % (buster.name, buster.count_score()))
 
 
-print(Game())
+Game(2)
+
