@@ -64,12 +64,6 @@ class Deck(object):
         self.__delete_card_from_deck(card)
         return card
 
-    def get_cards(self, number):
-        list_of_cards = []
-        for i in range(number):
-            list_of_cards.append(self.get_card())
-        return list_of_cards
-
     def __delete_card_from_deck(self, card):
         self.cards.remove(card)
 
@@ -100,6 +94,8 @@ class Croupier(Contestant):
     def __init__(self):
         super().__init__()
         self.name = "Croupier"
+        self.casino = 0
+        self.cash = 0
 
     def should_draw_cards(self):
         return self.count_score() <= 16
@@ -146,7 +142,7 @@ class Game(object):
         self.create_players(number_of_players)
         self.deal_cards()
         self.print_croupier_card()
-        # self.players_betting()
+        self.players_betting()
         self.players_auction()
         self.get_croupier_card()
         self.check_the_winner()
@@ -170,30 +166,45 @@ class Game(object):
             for player in self.players:
                 if player.last_move != LastMove.STAND:
                     print("%s have: %s, %s points" % (player.name, player.hand, player.count_score()))
-                    choice = UserInputProvider().collect_proper_str_from_user(["h", "st", "H", "ST"],
-                                                                              "%s, please enter h for hit or st for stand: " % player.name)
+                    choice = self.take_user_choice(player)
                     player.last_move = LastMove.select_move(choice)
                     self.game_action(choice, player)
+
+    def take_user_choice(self, player):
+        if player.cash < player.bet_value:
+            return (UserInputProvider().collect_proper_str_from_user(["h", "st", "H", "ST"],
+                                                          "%s, please enter h for hit, st for stand: " % player.name)).lower()
+        else:
+            return (UserInputProvider().collect_proper_str_from_user(["h", "st", "H", "ST", "dd", "DD"],
+                                                          "%s, please enter h for hit, st for stand, dd for double down: " % player.name)).lower()
 
     def game_action(self, choice, player):
         if choice == "h":
             player.add_card_to_hand(self.deck.get_card())
+        elif choice == "dd":
+            player.add_card_to_hand(self.deck.get_card())
+            player.cash -= player.bet_value
+            self.croupier.casino += player.bet_value
+            player.bet_value *= 2
+            print("Your bet value now is equal: %s" % player.bet_value)
 
     def get_croupier_card(self):
         while self.croupier.should_draw_cards():
-            print("Croupier have: %s, %s, points" % (self.croupier.hand, self.croupier.count_score()))
+            print("Croupier have: %s, %s points" % (self.croupier.hand, self.croupier.count_score()))
             self.croupier.add_card_to_hand(self.deck.get_card())
         else:
-            print("Croupier have: %s, %s, points" % (self.croupier.hand, self.croupier.count_score()))
+            print("Croupier have: %s, %s points" % (self.croupier.hand, self.croupier.count_score()))
 
     def print_croupier_card(self):
         print("Croupier have: ", self.croupier.get_single_card())
 
-    # def players_betting(self):
-    #     for player in self.players:
-    #         print("%s have: %s" % (player.name, player.hand))
-    #         player.bet_value = int(UserInputProvider().collect_int_in_range_from_user(1, player.cash,
-    #                                                                                   "%s please enter your bet bigger than 1$: " % player.name))
+    def players_betting(self):
+        for player in self.players:
+            print("%s have: %s, %s points" % (player.name, player.hand, player.count_score()))
+            player.bet_value = int(UserInputProvider().collect_int_in_range_from_user(1, player.cash,
+                                                                                      "%s please enter your bet bigger than 1$: " % player.name))
+            player.cash -= player.bet_value
+            self.croupier.casino += player.bet_value
 
     def get_busters(self):
         self.players.append(self.croupier)
@@ -201,23 +212,25 @@ class Game(object):
         [self.players.remove(buster) for buster in busters]
         return busters
 
-    def sort_by_scores(self, score):
-        return score.count_score()
+    def get_scores(self, player):
+        return player.count_score()
 
     def check_the_winner(self):
-        sorted_busters = sorted(self.get_busters(), key=self.sort_by_scores)
-        sorted_players = sorted(self.players, key=self.sort_by_scores, reverse=True)
+        sorted_busters = sorted(self.get_busters(), key=self.get_scores)
+        sorted_players = sorted(self.players, key=self.get_scores, reverse=True)
         winners = [player for player in sorted_players if player.count_score() == sorted_players[0].count_score()]
         [sorted_players.remove(player) for player in sorted_players if player in winners]
         if len(winners) > 0:
+            win_prize = int(self.croupier.casino / len(winners))
             for winner in winners:
-                print("The winner is: %s with %s points" % (winner.name, winner.count_score()))
+                winner.cash += win_prize
+                print("The winner is: %s with %s points and %s $ prize - his cash capital is equal %s $" % (winner.name, winner.count_score(), win_prize, winner.cash))
         if len(sorted_players) > 0:
             for player in sorted_players:
-                print("%s have %s points" % (player.name, player.count_score()))
+                print("%s have %s points and cash capital equal %s $" % (player.name, player.count_score(), player.cash))
         if len(sorted_busters) > 0:
             for buster in sorted_busters:
-                print("The buster is: %s with %s points" % (buster.name, buster.count_score()))
+                print("The buster is: %s with %s points and cash capital equal %s $" % (buster.name, buster.count_score(), buster.cash))
 
 
 Game(2)
