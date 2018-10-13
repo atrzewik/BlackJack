@@ -138,12 +138,14 @@ class Game(object):
     def __init__(self, number_of_players):
         self.croupier = Croupier()
         self.players = []
+        self.splitted_players = []
         self.deck = Deck()
         self.create_players(number_of_players)
         self.deal_cards()
         self.print_croupier_card()
         self.players_betting()
-        self.players_auction()
+        self.players_auction(self.players)
+        self.players_auction(self.splitted_players)
         self.get_croupier_card()
         self.check_the_winner()
 
@@ -161,9 +163,11 @@ class Game(object):
                 player.add_card_to_hand(card)
             self.croupier.add_card_to_hand(self.deck.get_card())
 
-    def players_auction(self):
-        while not all(player_last_move == LastMove.STAND for player_last_move in [player.last_move for player in self.players]):
-            for player in self.players:
+    def players_auction(self, players):
+        while not all(player_last_move == LastMove.STAND for player_last_move in [player.last_move for player in players]):
+            for player in players:
+                if len(player.hand) >= 11:
+                    player.last_move = LastMove.STAND
                 if player.last_move != LastMove.STAND:
                     print("%s have: %s, %s points" % (player.name, player.hand, player.count_score()))
                     choice = self.take_user_choice(player)
@@ -171,12 +175,16 @@ class Game(object):
                     self.game_action(choice, player)
 
     def take_user_choice(self, player):
-        if player.cash < player.bet_value:
-            return (UserInputProvider().collect_proper_str_from_user(["h", "st", "H", "ST"],
-                                                          "%s, please enter h for hit, st for stand: " % player.name)).lower()
+        if player.cash >= player.bet_value and player.last_move == LastMove.NONE:
+            if player.hand[0].sign.value == player.hand[1].sign.value:
+                return (UserInputProvider().collect_proper_str_from_user(["h", "st", "dd", "sp", "H", "ST", "DD", "SP"],
+                                                                         "%s, please enter h for hit, st for stand, dd for double down or sp for split: " % player.name)).lower()
+            else:
+                return (UserInputProvider().collect_proper_str_from_user(["h", "st", "dd", "H", "ST", "DD"],
+                                                                         "%s, please enter h for hit, st for stand or dd for double down: " % player.name)).lower()
         else:
-            return (UserInputProvider().collect_proper_str_from_user(["h", "st", "H", "ST", "dd", "DD"],
-                                                          "%s, please enter h for hit, st for stand, dd for double down: " % player.name)).lower()
+                return (UserInputProvider().collect_proper_str_from_user(["h", "st", "H", "ST"],
+                                                              "%s, please enter h for hit or st for stand: " % player.name)).lower()
 
     def game_action(self, choice, player):
         if choice == "h":
@@ -186,7 +194,21 @@ class Game(object):
             player.cash -= player.bet_value
             self.croupier.casino += player.bet_value
             player.bet_value *= 2
-            print("Your bet value now is equal: %s" % player.bet_value)
+            player.last_move = LastMove.STAND
+            print("You have %s, %s points and your bet value now is equal: %s" % (player.hand, player.count_score(), player.bet_value))
+        elif choice == "sp":
+            player_second_hand = Player(player.name, player.cash)
+            player_second_hand.add_card_to_hand(player.hand[1])
+            player.hand.remove(player.hand[1])
+            player.cash -= player.bet_value
+            player_second_hand.cash = player.cash
+            self.croupier.casino += player.bet_value
+            player_second_hand.bet_value = player.bet_value
+            player.add_card_to_hand(self.deck.get_card())
+            player_second_hand.last_move = LastMove.SPLIT
+            player_second_hand.add_card_to_hand(self.deck.get_card())
+            self.splitted_players.append(player_second_hand)
+
 
     def get_croupier_card(self):
         while self.croupier.should_draw_cards():
@@ -207,6 +229,8 @@ class Game(object):
             self.croupier.casino += player.bet_value
 
     def get_busters(self):
+        for player in self.splitted_players:
+            self.players.append(player)
         self.players.append(self.croupier)
         busters = [player for player in self.players if player.count_score() > 21]
         [self.players.remove(buster) for buster in busters]
@@ -225,9 +249,12 @@ class Game(object):
             for winner in winners:
                 winner.cash += win_prize
                 print("The winner is: %s with %s points and %s $ prize - his cash capital is equal %s $" % (winner.name, winner.count_score(), win_prize, winner.cash))
+                [sorted_players.remove(player) for player in sorted_players if player.name == winner.name]
+                [sorted_busters.remove(player) for player in sorted_busters if player.name == winner.name]
         if len(sorted_players) > 0:
             for player in sorted_players:
                 print("%s have %s points and cash capital equal %s $" % (player.name, player.count_score(), player.cash))
+                [sorted_busters.remove(buster) for buster in sorted_busters if buster.name == player.name]
         if len(sorted_busters) > 0:
             for buster in sorted_busters:
                 print("The buster is: %s with %s points and cash capital equal %s $" % (buster.name, buster.count_score(), buster.cash))
