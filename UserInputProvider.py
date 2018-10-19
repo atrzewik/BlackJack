@@ -1,14 +1,24 @@
 class UserInputProvider(object):
 
     @staticmethod
-    def collect_int_in_range_from_user(minimum, maximum, message):
+    def collect_int_in_range_min_max_from_user(minimum, maximum, message):
         user_input = UserInputProvider.collect_int_from_user(message)
         if minimum <= user_input <= maximum:
             return user_input
         else:
             UserInputProvider.__print_error(
                 "You must input value in range: {} - {}! Please try again: ".format(minimum, maximum))
-            return UserInputProvider.collect_int_in_range_from_user(minimum, maximum, message)
+            return UserInputProvider.collect_int_in_range_min_max_from_user(minimum, maximum, message)
+
+    @staticmethod
+    def collect_int_in_range_min_from_user(minimum, message):
+        user_input = UserInputProvider.collect_int_from_user(message)
+        if minimum <= user_input:
+            return user_input
+        else:
+            UserInputProvider.__print_error(
+                "You must input value bigger then {} ! Please try again: ".format(minimum))
+            return UserInputProvider.collect_int_in_range_min_from_user(minimum, message)
 
     @staticmethod
     def collect_proper_str_from_user(list_of_string, message):
