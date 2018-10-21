@@ -74,6 +74,8 @@ class Contestant(object):
 
     def __init__(self):
         self.hand = []
+        self.position = 0
+        self.buster = False
 
     def add_card_to_hand(self, card):
         self.hand.append(card)
@@ -218,6 +220,7 @@ class Player(Contestant):
 class Game(object):
 
     def __init__(self, number_of_players):
+        self.number_of_players = number_of_players
         self.croupier = Croupier()
         self.players = []
         self.deck = Deck()
@@ -227,7 +230,8 @@ class Game(object):
         self.players_betting()
         self.players_auction()
         self.get_croupier_cards()
-        self.get_results()
+        self.get_players_positions()
+        self.get_winners()
 
     def create_players(self, number_of_players):
         for i in range(number_of_players):
@@ -292,78 +296,73 @@ class Game(object):
     def add_croupier_to_players(self):
         return self.players.append(self.croupier)
 
-    def remove_players_from_all_players(self, players):
-        [self.players.remove(player) for player in players]
-
-    def get_busters(self):
-        self.add_croupier_to_players()
-        busters = [player for player in self.players if player.count_score() > 21]
-        self.remove_players_from_all_players(busters)
-        return busters
-
     def get_scores(self, player):
         return player.count_score()
 
-    def sort_players(self, players, boolean):
-        return sorted(players, key=self.get_scores, reverse=boolean)
+    def get_positions(self, player):
+        return player.position
 
-    def get_winners(self):
-        self.players = self.sort_players(self.players, True)
-        winners = [player for player in self.players if player.count_score() == self.players[0].count_score()]
-        self.remove_players_from_all_players(winners)
-        return winners
+    def sort_players(self, key_to_sort, way_of_sorting):
+        return sorted(self.players, key=key_to_sort, reverse=way_of_sorting)
 
-    def get_win_prize(self, winners):
+    def get_players_positions(self):
+        self.add_croupier_to_players()
+        self.players = self.sort_players(self.get_scores, True)
+        position_first = 0
+        number_of_players = self.number_of_players + 1
+        for i in range(len(self.players)):
+            current_player = self.players[i]
+            previous_player = self.players[i - 1]
+            if current_player.count_score() > 21:
+                if i == 0:
+                    current_player.position = number_of_players - i
+                else:
+                    if current_player.count_score() == previous_player.count_score():
+                        self.players[i].position = previous_player.position
+                    else:
+                        current_player.position = number_of_players - i
+                current_player.buster = True
+            else:
+                if current_player.count_score() == previous_player.count_score():
+                    self.players[i].position = position_first
+                else:
+                    position_first += 1
+                    self.players[i].position = position_first
+
+    def get_win_prize(self):
+        winners = [player for player in self.players if player.position == 1]
         return int(self.croupier.casino / len(winners))
 
-    def get_results(self):
-        sorted_busters = self.sort_players(self.get_busters(), False)
-        winners = self.get_winners()
-        win_prize = self.get_win_prize(winners)
-        if len(winners) > 0:
-            if len(winners) > 1:
-                print("The winners are: ", end="")
-                for winner in winners:
-                    winner.cash += win_prize
-                    print("%s with %s points and %s $ prize - his cash capital is equal %s $" % (
-                        winner.name, winner.count_score(), win_prize, winner.cash), end=", ")
+    def get_winners(self):
+        win_prize = self.get_win_prize()
+        self.players = self.sort_players(self.get_positions, False)
+        list_of_positions = [player.position for player in self.players]
+        for i in range(len(self.players)):
+            current_player = self.players[i]
+            previous_player = self.players[i - 1]
+            list_of_positions.remove(current_player.position)
+            if not current_player.buster:
+                if i == 0:
+                    if current_player.position in list_of_positions:
+                        print("The winners are: %s with %s points and %s $prize - his cash capital is equal %s $" % (current_player.name, current_player.count_score(), win_prize, current_player.cash), end=" ")
+                    else:
+                        print("The winner is: %s with %s points and %s $prize - his cash capital is equal %s $" % (current_player.name, current_player.count_score(), win_prize, current_player.cash), end=" ")
+                else:
+                    if current_player.position == previous_player.position:
+                        if current_player.position == 1:
+                            print(", %s with %s points and %s $prize - his cash capital is equal %s $" % (current_player.name, current_player.count_score(), win_prize, current_player.cash), end=" ")
+                        else:
+                            print(", %s with %s points and cash capital equal %s $" % (current_player.name, current_player.count_score(), current_player.cash), end=" ")
+                    else:
+                        print("\n%s with %s points and cash capital equal %s $" % (current_player.name, current_player.count_score(), current_player.cash), end=" ")
             else:
-                for winner in winners:
-                    winner.cash += win_prize
-                    print("The winner is: %s with %s points and %s $ prize - his cash capital is equal %s $" % (
-                        winner.name, winner.count_score(), win_prize, winner.cash))
-        while len(self.players) > 0:
-            check_equals = self.check_if_equals(self.players)
-            if len(check_equals) > 1:
-                print("A draw have: ", end="")
-                for equal in check_equals:
-                    print("%s with %s points and cash capital equal %s $" % (equal.name, equal.count_score(), equal.cash), end=", ")
-            else:
-                for equal in check_equals:
-                    print("%s have %s points and cash capital equal %s $" % (equal.name, equal.count_score(), equal.cash))
-        while len(sorted_busters) > 0:
-            check_equals = self.check_if_equals(sorted_busters)
-            if len(check_equals) > 1:
-                print("A busters with draw are: ", end="")
-                for equal in check_equals:
-                    print("%s with %s points and cash capital equal %s $" % (
-                        equal.name, equal.count_score(), equal.cash))
-            else:
-                for equal in check_equals:
-                    print("The buster is: %s with %s points and cash capital equal %s $" % (
-                        equal.name, equal.count_score(), equal.cash))
-
-    def check_if_equals(self, players):
-        equal = []
-        points = [player.count_score() for player in players]
-        regex = (str(points[0]))
-        results = re.findall(regex, str(points))
-        for result in results:
-            for player in players:
-                if player.count_score() == int(result):
-                    players.remove(player)
-                    equal.append(player)
-        return equal
+                if current_player.position in list_of_positions:
+                    print("\nThe busters with draw are: %s with %s points and cash capital equal %s $" % (current_player.name, current_player.count_score(), current_player.cash), end=" ")
+                elif current_player.position != previous_player.position:
+                    print("\nThe buster is: %s with %s points and cash capital equal %s $" % (current_player.name, current_player.count_score(), current_player.cash), end=" ")
+                if current_player.position == previous_player.position:
+                    print(", %s with %s points and cash capital equal %s $" % (current_player.name, current_player.count_score(), current_player.cash), end=" ")
 
 
 Game(4)
+
